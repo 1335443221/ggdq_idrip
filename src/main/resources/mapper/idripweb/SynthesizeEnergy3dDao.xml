@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sl.idripweb.dao.SynthesizeEnergy3dDao">
+
+    <!--获取需要展示的地图上厂区-->
+    <select id="getDisplayFactorys" resultType="java.util.HashMap">
+        SELECT
+                id,
+                `key` AS key_name,
+                `value`,
+                project_id,
+                `desc` AS description
+            FROM
+                extend_info
+            WHERE
+                project_id = #{project_id}
+            AND `key` = #{key_name}
+            ORDER BY
+                id ASC LIMIT 1
+    </select>
+
+    <!--获取今年电量年统计-->
+    <select id="getElecMeterYearData" resultType="java.util.HashMap">
+        SELECT
+            year_data_ep.meter_id,
+            year_data_ep.power_per_month
+        FROM
+            year_data_ep
+            LEFT JOIN elec_meter ON year_data_ep.meter_id = elec_meter.id
+        WHERE
+            year_data_ep.date = #{date}
+            AND elec_meter.project_id = #{project_id}
+            <if test="meter_list != null">
+                AND year_data_ep.meter_id IN
+                <foreach collection="meter_list" item="id" index="index" open="(" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+    </select>
+
+    <!--获取所有子表电表标签-->
+    <select id="getElecCategoryMeterList" resultType="java.lang.String">
+        SELECT
+            elec_meter.id
+        FROM
+            elec_meter
+            JOIN elec_category_meter_relation ON elec_meter.id = elec_category_meter_relation.meter_id
+            JOIN elec_category ON elec_category_meter_relation.category_id = elec_category.id
+        WHERE
+            elec_meter.project_id = #{project_id}
+            AND elec_category.category_type = 2
+    </select>
+
+    <!--获取所有子表水表标签-->
+    <select id="getWaterCategoryMeterList" resultType="java.lang.String">
+        SELECT
+            water_meter.id
+        FROM
+            water_meter
+            JOIN water_category_meter_relation ON water_meter.id = water_category_meter_relation.meter_id
+            JOIN water_category ON water_category.id = water_category_meter_relation.category_id
+        WHERE
+            water_meter.project_id = #{project_id}
+            AND water_category.category_type = 2
+    </select>
+
+    <!--获取今年水量年统计-->
+    <select id="getWaterMeterYearData" resultType="java.util.HashMap">
+        SELECT
+            year_data_qf.meter_id,
+            year_data_qf.power_per_month
+        FROM
+            year_data_qf
+            LEFT JOIN water_meter ON year_data_qf.meter_id = water_meter.id
+        WHERE
+            year_data_qf.date = #{date}
+            AND water_meter.project_id = #{project_id}
+            <if test="meter_list != null">
+                AND year_data_qf.meter_id IN
+                <foreach collection="meter_list" item="id" index="index" open="(" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+    </select>
+
+    <!--获取所有子表气表标签-->
+    <select id="getGasCategoryMeterList" resultType="java.lang.String">
+        SELECT
+            gas_meter.id
+        FROM
+            gas_meter
+            JOIN gas_category_meter_relation ON gas_meter.id = gas_category_meter_relation.meter_id
+            JOIN gas_category ON gas_category.id = gas_category_meter_relation.category_id
+        WHERE
+            gas_meter.project_id = #{project_id}
+            AND gas_category.category_type = 2
+    </select>
+
+    <!--获取今年气量年统计-->
+    <select id="getGasMeterYearData" resultType="java.util.HashMap">
+        SELECT
+            year_data_gqf.meter_id,
+            year_data_gqf.power_per_month
+        FROM
+            year_data_gqf
+            LEFT JOIN gas_meter ON year_data_gqf.meter_id = gas_meter.id
+        WHERE
+            year_data_gqf.date = #{date}
+            AND gas_meter.project_id = #{project_id}
+            <if test="meter_list != null">
+                AND year_data_gqf.meter_id IN
+                <foreach collection="meter_list" item="id" index="index" open="(" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+    </select>
+
+    <!--各区域用水量统计-->
+    <select id="getAreaWaterYearData" resultType="java.util.HashMap">
+        SELECT
+            project_factory.factory_name,
+            round(sum(year_data_qf.power), 1) power
+        FROM
+            year_data_qf
+            LEFT JOIN water_meter ON year_data_qf.meter_id = water_meter.id
+            LEFT JOIN project_factory ON water_meter.factory_id = project_factory.id
+        WHERE
+            water_meter.project_id = #{project_id}
+            AND year_data_qf.date = #{date}
+            <if test="meter_list != null">
+                AND year_data_qf.meter_id IN
+                <foreach collection="meter_list" item="id" index="index" open="(" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+        GROUP BY
+            project_factory.factory_name
+    </select>
+
+    <!--用户用电排名-->
+    <select id="getElecRanking" resultType="java.util.HashMap">
+        SELECT
+            project_factory.id factory_id,
+            project_factory.factory_name area,
+            transformerroom.name station,
+            round(sum(year_data_ep.power), 1) used
+        FROM
+            year_data_ep
+            LEFT JOIN elec_meter ON year_data_ep.meter_id = elec_meter.id
+            LEFT JOIN transformerroom ON elec_meter.transformerroom_id = transformerroom.id
+            LEFT JOIN project_factory ON transformerroom.factory_id = project_factory.id
+        WHERE
+            year_data_ep.date = #{date}
+            <if test="meter_list != null">
+                AND elec_meter.id IN
+                <foreach collection="meter_list" item="id" index="index" open="(" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+        GROUP BY
+            station
+        ORDER BY
+            used DESC
+    </select>
+
+    <!--用户用水排名-->
+    <select id="getWaterRanking" resultType="java.util.HashMap">
+        SELECT
+            project_factory.id factory_id,
+            project_factory.factory_name area,
+            water_pump_room.NAME station,
+            round(sum(year_data_qf.power), 1) used
+        FROM
+            year_data_qf
+            LEFT JOIN water_meter ON year_data_qf.meter_id = water_meter.id
+            LEFT JOIN water_pump_room ON water_meter.water_pump_room_id = water_pump_room.id
+            LEFT JOIN project_factory ON water_pump_room.factory_id = project_factory.id
+        WHERE
+            year_data_qf.date = #{date}
+            <if test="meter_list != null">
+                AND water_meter.id IN
+                <foreach collection="meter_list" item="id" index="index" open="(" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+        GROUP BY
+            station
+        ORDER BY
+            used DESC
+    </select>
+
+    <!--用户用气排名-->
+    <select id="getGasRanking" resultType="java.util.HashMap">
+        SELECT
+            project_factory.id factory_id,
+            project_factory.factory_name area,
+            gas_pressure_room.NAME station,
+            round(sum(year_data_gqf.power), 1) used
+        FROM
+            year_data_gqf
+            LEFT JOIN gas_meter ON year_data_gqf.meter_id = gas_meter.id
+            LEFT JOIN gas_pressure_room ON gas_meter.gas_pressure_room_id = gas_pressure_room.id
+            LEFT JOIN project_factory ON gas_pressure_room.factory_id = project_factory.id
+        WHERE
+            year_data_gqf.date = #{date}
+            <if test="meter_list != null">
+                AND gas_meter.id IN
+                <foreach collection="meter_list" item="id" index="index" open="(" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+        GROUP BY
+            station
+        ORDER BY
+            used DESC
+    </select>
+
+</mapper>

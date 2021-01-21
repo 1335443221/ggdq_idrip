@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sl.idripweb.dao.TgDao">
+
+    <!-- 获取所有通讯机 -->
+    <select id="getTgList" resultType="java.util.HashMap">
+        SELECT
+            ti.*
+        FROM
+            tg_info ti
+            WHERE ti.project_id = #{pid}
+    </select>
+
+</mapper>

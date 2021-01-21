@@ -1,0 +1,575 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sl.idripweb.dao.AlermConfigDao">
+
+    <!-- 查询 -->
+    <select id="queryList" resultType="java.util.Map">
+        SELECT c.id,n1.category_name category,
+        config_level,
+        c.alerm_type alerm_type_id,
+        alt.type_name alerm_type ,
+        alt.type_English_name code_use_name ,
+        pf.factory_name,
+        c.tag,
+        tg.desc tag_name,
+        c.device_type_relation_id device_id,
+        CASE c.is_effect
+        WHEN '1' THEN '是'
+        WHEN '0' THEN '否'
+        ELSE c.is_effect END is_effect,
+        CASE alt.type_English_name
+        WHEN 'water_business' THEN wpcr.category_name
+        WHEN 'elec_business' THEN epcr.category_name
+        ELSE dir.name END device_name,
+        config_desc,
+        h_level1,
+        h_level2,
+        l_level1,
+        l_level2,
+        n1.id cate_id,
+        CASE c.position_val
+        WHEN '1' THEN '开(至1)'
+        WHEN '0' THEN '关(至0)'
+        WHEN '2' THEN '开关都报警'
+        ELSE c.position_val END position_val,
+        c.category_id,
+        CASE alt.type_English_name
+        WHEN 'water_business' THEN wpcr.category_name
+        WHEN 'elec_business' THEN epcr.category_name
+        ELSE '' END business_name
+        from alerm_configer c
+        LEFT JOIN `device_info_relation` dir
+        ON dir.device_type_relation_id=c.device_type_relation_id
+        LEFT JOIN
+        (SELECT tag_name,e.desc,'elec_meter' AS tag_type FROM elec_tag e
+        UNION SELECT e2.tag_name,e2.desc,'temperature_controller' AS tag_type FROM elec_tag e2
+        UNION SELECT tag_name,w.desc,'water_meter' AS tag_type FROM water_tag w
+        UNION SELECT tag_name,g.DESC,'gas_meter' AS tag_type FROM gas_tag g
+        UNION SELECT tag_name,s.DESC,'smoke_detector' AS tag_type FROM
+        `smoke_detector_tag` s
+        UNION SELECT tag_name,i.DESC,'immersion_detector' AS tag_type FROM
+        `immersion_detector_tag` i
+        UNION SELECT tag_name,f.DESC,'fire_detector' AS tag_type FROM `fire_tag` f
+        UNION SELECT tag_name,pt.DESC,'photovoltaic_meter' AS tag_type FROM `photovoltaic_tag` pt
+        )tg
+
+        ON tg.tag_name=c.tag
+        AND tg.tag_type=dir.device_type
+
+        LEFT JOIN `project_factory` pf
+        ON pf.id=c.factory_id
+        LEFT JOIN alerm_category_n2 n1
+        ON n1.id=category
+
+
+        LEFT JOIN alerm_type alt
+        ON alt.id=c.alerm_type
+
+        LEFT JOIN `water_project_category_relation` wpcr
+        ON wpcr.category_id=c.category_id
+        LEFT JOIN `elec_project_category_relation` epcr
+        ON epcr.category_id=c.category_id
+
+        WHERE 1=1
+        and c.project_id = #{project_id}
+        <if test="factory_id != null and factory_id != '' and factory_id != 0">
+            and c.factory_id = #{factory_id}
+        </if>
+        <choose>
+            <when test="category != null and category != '' and category != 0">and c.config_type = #{category}</when>
+            <otherwise>and c.config_type in (2,3,4)</otherwise>
+        </choose>
+
+        <if test="confLevel != null and confLevel != ''  and confLevel != 0">
+            and c.config_level = #{confLevel}
+        </if>
+
+        <if test="alerm_type_id != null and alerm_type_id != ''  and alerm_type_id != 0">
+            and c.alerm_type = #{alerm_type_id}
+        </if>
+        order by c.id desc limit #{fromNum},#{pagSize}
+    </select>
+
+    <!-- 查询 -->
+    <select id="getWaterTagDescByName" resultType="java.lang.String">
+       SELECT w.desc FROM  `water_tag` w WHERE  w.tag_name=#{tag_name}
+    </select>
+    <!-- 查询 -->
+    <select id="getElecTagDescByName" resultType="java.lang.String">
+       SELECT e.desc FROM  `elec_tag` e WHERE  e.tag_name=#{tag_name}
+    </select>
+
+
+    <!-- 查询 -->
+    <select id="queryListCount" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        from alerm_configer c
+        LEFT JOIN `device_info_relation` dir
+        ON dir.device_type_relation_id=c.device_type_relation_id
+        LEFT JOIN
+        (SELECT tag_name,e.desc,'elec_meter' AS tag_type FROM elec_tag e
+        UNION SELECT e2.tag_name,e2.desc,'temperature_controller' AS tag_type FROM elec_tag e2
+        UNION SELECT tag_name,w.desc,'water_meter' AS tag_type FROM water_tag w
+        UNION SELECT tag_name,g.DESC,'gas_meter' AS tag_type FROM gas_tag g
+        UNION SELECT tag_name,s.DESC,'smoke_detector' AS tag_type FROM `smoke_detector_tag` s
+        UNION SELECT tag_name,i.DESC,'immersion_detector' AS tag_type FROM `immersion_detector_tag` i
+        UNION SELECT tag_name,f.DESC,'fire_detector' AS tag_type FROM `fire_tag` f
+        )tg
+        ON tg.tag_name=c.tag
+        AND tg.tag_type=dir.device_type
+
+        LEFT JOIN `project_factory` pf
+        ON pf.id=c.factory_id
+        LEFT JOIN alerm_category_n2 n1
+        ON n1.id=category
+
+
+        LEFT JOIN alerm_type alt
+        ON alt.id=c.alerm_type
+
+        LEFT JOIN `water_project_category_relation` wpcr
+        ON wpcr.category_id=c.category_id
+        LEFT JOIN `elec_project_category_relation` epcr
+        ON epcr.category_id=c.category_id
+
+        WHERE 1=1
+        and c.project_id = #{project_id}
+        <if test="factory_id != null and factory_id != '' and factory_id != 0">
+            and c.factory_id = #{factory_id}
+        </if>
+        <choose>
+            <when test="category != null and category != '' and category != 0">and c.config_type = #{category}</when>
+            <otherwise>and c.config_type in (2,3,4)</otherwise>
+        </choose>
+
+        <if test="confLevel != null and confLevel != ''  and confLevel != 0">
+            and c.config_level = #{confLevel}
+        </if>
+
+        <if test="alerm_type_id != null and alerm_type_id != ''  and alerm_type_id != 0">
+            and c.alerm_type = #{alerm_type_id}
+        </if>
+        order by c.id desc
+    </select>
+
+
+
+    <!-- 报警分类关系树 -->
+    <select id="getCategoryRelation" resultType="java.util.Map">
+        SELECT n2.category_name, n2.id,n3.category_name cate_name3,n3.id c3id FROM
+        `project_alerm_catrgory_relation` r
+        LEFT JOIN alerm_category_n2 n2
+        ON
+        n2.id=r.category2_id
+        LEFT JOIN alerm_category_n3 n3
+        ON
+        n2.category3_id=n3.id
+        WHERE r.project_id=#{project_id}
+        AND
+        n3.category_name IS NOT NULL
+        AND n3.id IN(2,3,4)
+        <if test="alerm_type_id != null and alerm_type_id != '' and alerm_type_id != 0">
+            and alerm_type_id = #{alerm_type_id}
+        </if>
+    </select>
+
+
+    <select id="getAlermType" resultType="java.util.HashMap">
+        SELECT DISTINCT a.id,a.type_name,a.type_English_name FROM alerm_type a
+        LEFT JOIN `alerm_category_n2` c
+        ON c.alerm_type_id=a.id
+        LEFT JOIN `project_alerm_catrgory_relation` p
+        ON p.category2_id=c.id
+        WHERE p.project_id=#{project_id}
+        <if test="alerm_type_id != null and alerm_type_id != ''">
+            and a.id = #{alerm_type_id}
+        </if>
+    </select>
+
+
+    <!-- 获取分项报表分类关系树 -->
+    <select id="getCategoryRelationTreeElec" resultType="com.sl.idripweb.entity.alerm.CategoryRelationTree">
+		SELECT  r.category_id AS id, r.parent_category_id parentId,r.category_name text,r.transformerroom_id,dtr.id device_id
+		FROM elec_project_category_relation r
+	    LEFT JOIN `elec_category_meter_relation` cmr ON r.category_id=cmr.category_id
+	    LEFT JOIN `device_type_relation` dtr ON cmr.meter_id=dtr.device_id AND cmr.device_type_id=dtr.device_type_id
+		WHERE r.category_type_id=3
+		AND r.project_id=#{project_id}
+		AND r.factory_id=#{factory_id}
+	</select>
+
+    <!-- 获取分项报表分类关系树 -->
+    <select id="getCategoryRelationTreeWater" resultType="com.sl.idripweb.entity.alerm.CategoryRelationTree">
+		SELECT  r.category_id AS id, r.parent_category_id parentId,r.category_name text,r.water_pump_room_id AS transformerroom_id,dtr.id device_id
+		FROM water_project_category_relation r
+	    LEFT JOIN `water_category_meter_relation` cmr ON r.category_id=cmr.category_id
+    	LEFT JOIN `device_type_relation` dtr ON cmr.meter_id=dtr.device_id AND cmr.device_type_id=dtr.device_type_id
+		WHERE r.category_type_id=3
+		AND r.project_id=#{project_id}
+		AND r.factory_id=#{factory_id}
+	</select>
+    <!-- 获取分项报表分类关系树 -->
+    <select id="getCategoryRelationTreeGas" resultType="com.sl.idripweb.entity.alerm.CategoryRelationTree">
+		SELECT  r.category_id AS id, r.parent_category_id parentId,r.category_name text,r.gas_pressure_room_id AS transformerroom_id,dtr.id device_id
+		FROM gas_project_category_relation r
+	    LEFT JOIN `gas_category_meter_relation` cmr ON r.category_id=cmr.category_id
+	    LEFT JOIN `device_type_relation` dtr ON cmr.meter_id=dtr.device_id AND cmr.device_type_id=dtr.device_type_id
+		WHERE r.category_type_id=3
+		AND r.project_id=#{project_id}
+		AND r.factory_id=#{factory_id}
+	</select>
+    <!-- 获取分项报表分类关系树 -->
+    <select id="getCategoryRelationTreeDetector" resultType="com.sl.idripweb.entity.alerm.CategoryRelationTree">
+		SELECT dtr.id,transformerroom_id AS parentId,d.desc AS text,d.transformerroom_id,dtr.id device_id FROM ${tableName} d
+		LEFT JOIN `device_type_relation` dtr ON dtr.device_id=d.id
+		INNER JOIN `device_type` dt ON dtr.device_type_id=dt.id AND dt.device_type=#{tableName}
+		WHERE d.project_id=#{project_id} AND d.factory_id=#{factory_id}
+
+		UNION ALL
+
+		SELECT id,0 AS parentId,`name` text,id transformerroom_id,id device_id
+		FROM `transformerroom`
+		WHERE id in (SELECT transformerroom_id FROM fire_detector WHERE project_id=#{project_id} AND factory_id=#{factory_id} GROUP BY transformerroom_id)
+	</select>
+    <!-- 获取分项报表分类关系树 -->
+    <select id="getCategoryRelationTreeWaterBusiness" resultType="com.sl.idripweb.entity.alerm.CategoryRelationTree">
+		SELECT r.category_id AS id,IF(r.parent_category_id=0,r.water_pump_room_id,r.parent_category_id)  parentId,r.category_name text,r.water_pump_room_id AS transformerroom_id,r.category_id device_id
+		FROM `water_project_category_relation` r
+		LEFT JOIN `water_category_type` t on r.category_type_id=t.id
+	    LEFT JOIN `water_category_meter_relation` cmr ON r.category_id=cmr.category_id
+    	LEFT JOIN `device_type_relation` dtr ON cmr.meter_id=dtr.device_id AND cmr.device_type_id=dtr.device_type_id
+	    LEFT JOIN   water_pump_room  tf on r.water_pump_room_id=tf.id
+		WHERE t.code_use_name='shanghu_water'
+		AND r.project_id=#{project_id}
+		AND r.factory_id=#{factory_id}
+
+		UNION ALL
+
+		SELECT id,0 AS parentId,`name` text,id transformerroom_id,id device_id
+		FROM `water_pump_room`
+		WHERE id in (
+		SELECT r.water_pump_room_id
+		FROM `water_project_category_relation` r
+		LEFT JOIN `water_category_type` t on r.category_type_id=t.id
+	    LEFT JOIN `water_category_meter_relation` cmr ON r.category_id=cmr.category_id
+    	LEFT JOIN `device_type_relation` dtr ON cmr.meter_id=dtr.device_id AND cmr.device_type_id=dtr.device_type_id
+		WHERE t.code_use_name='shanghu_water'
+		AND r.project_id=#{project_id}
+		AND r.factory_id=#{factory_id}
+		GROUP BY r.water_pump_room_id
+		)
+	</select>
+    <!-- 获取分项报表分类关系树 -->
+    <select id="getCategoryRelationTreeElecBusiness" resultType="com.sl.idripweb.entity.alerm.CategoryRelationTree">
+		SELECT  r.category_id AS id,IF(r.parent_category_id=0,r.transformerroom_id,r.parent_category_id) parentId,r.category_name text,r.transformerroom_id,r.category_id device_id
+		FROM `elec_project_category_relation` r
+		LEFT JOIN `elec_category_type` t on r.category_type_id=t.id
+	    LEFT JOIN `elec_category_meter_relation` cmr ON r.category_id=cmr.category_id
+    	LEFT JOIN `device_type_relation` dtr ON cmr.meter_id=dtr.device_id AND cmr.device_type_id=dtr.device_type_id
+		LEFT JOIN   transformerroom  tf on r.transformerroom_id=tf.id
+		WHERE t.code_use_name='shanghu_elec'
+		AND r.project_id=#{project_id}
+		AND r.factory_id=#{factory_id}
+
+		UNION ALL
+
+		SELECT id,0 AS parentId,`name` text,id transformerroom_id,id device_id
+		FROM `transformerroom`
+		WHERE id in (
+		SELECT r.transformerroom_id
+		FROM `elec_project_category_relation` r
+		LEFT JOIN `elec_category_type` t on r.category_type_id=t.id
+	    LEFT JOIN `elec_category_meter_relation` cmr ON r.category_id=cmr.category_id
+    	LEFT JOIN `device_type_relation` dtr ON cmr.meter_id=dtr.device_id AND cmr.device_type_id=dtr.device_type_id
+		WHERE t.code_use_name='shanghu_elec'
+		AND r.project_id=#{project_id}
+		AND r.factory_id=#{factory_id}
+		GROUP BY r.transformerroom_id
+		)
+	</select>
+
+
+
+    <!-- 根据device_type_relation_idS获取tag 水、电、气、烟感、渗水、电气火灾等 begin -->
+    <select id="getTagByRelationIdsElec" resultType="java.util.HashMap">
+        SELECT id,Ename,Cname,alerm_type_id FROM (
+        SELECT COUNT(g.id) COUNT,g.tag_name Ename,g.desc Cname,r.alerm_type_id,g.id
+        FROM elec_meter e
+        LEFT JOIN `elec_mode` m ON e.mode_id=m.id
+        LEFT JOIN `elec_mode_tag_relation` gr ON m.id=gr.mode_id
+        LEFT JOIN `elec_tag` g ON g.id=gr.tag_id
+        LEFT JOIN `device_info_relation` r ON r.id=e.id
+        WHERE r.device_type_relation_id IN
+        <foreach collection="list" item="list" index="index" open="(" close=")" separator=",">
+            #{list}
+        </foreach>
+        AND r.device_type='elec_meter'
+        GROUP BY g.id,g.tag_name,g.desc
+        )t
+        WHERE COUNT=#{length}
+    </select>
+    <select id="getTagByRelationIdsWater" resultType="java.util.HashMap">
+        SELECT id,Ename,Cname,alerm_type_id FROM (
+        SELECT COUNT(g.id) COUNT,g.tag_name Ename,g.desc Cname,r.alerm_type_id,g.id
+        FROM water_meter e
+        LEFT JOIN `water_mode` m ON e.mode_id=m.id
+        LEFT JOIN `water_mode_tag_relation` gr ON m.id=gr.mode_id
+        LEFT JOIN `water_tag` g ON g.id=gr.tag_id
+        LEFT JOIN `device_info_relation` r ON r.id=e.id
+        WHERE r.device_type_relation_id IN
+        <foreach collection="list" item="list" index="index" open="(" close=")" separator=",">
+            #{list}
+        </foreach>
+        AND r.device_type='water_meter'
+        GROUP BY g.id,g.tag_name,g.desc
+        )t
+        WHERE COUNT=#{length}
+    </select>
+    <select id="getTagByRelationIdsGas" resultType="java.util.HashMap">
+        SELECT id,Ename,Cname,alerm_type_id FROM (
+        SELECT COUNT(g.id) COUNT,g.tag_name Ename,g.desc Cname,r.alerm_type_id,g.id
+        FROM gas_meter e
+        LEFT JOIN `gas_mode` m ON e.mode_id=m.id
+        LEFT JOIN `gas_mode_tag_relation` gr ON m.id=gr.mode_id
+        LEFT JOIN `gas_tag` g ON g.id=gr.tag_id
+        LEFT JOIN `device_info_relation` r ON r.id=e.id
+        WHERE r.device_type_relation_id IN
+        <foreach collection="list" item="list" index="index" open="(" close=")" separator=",">
+            #{list}
+        </foreach>
+        AND r.device_type='gas_meter'
+        GROUP BY g.id,g.tag_name,g.desc
+        )t
+        WHERE COUNT=#{length}
+    </select>
+    <select id="getTagByRelationIdsFireDetector" resultType="java.util.HashMap">
+        SELECT id,Ename,Cname,alerm_type_id FROM (
+        SELECT COUNT(g.id) COUNT,g.tag_name Ename,g.desc Cname,r.alerm_type_id,g.id
+        FROM fire_detector e
+        LEFT JOIN `fire_mode` m ON e.mode_id=m.id
+        LEFT JOIN `fire_mode_tag_relation` gr ON m.id=gr.mode_id
+        LEFT JOIN `fire_tag` g ON g.id=gr.tag_id
+        LEFT JOIN `device_info_relation` r ON r.id=e.id
+        WHERE r.device_type_relation_id IN
+        <foreach collection="list" item="list" index="index" open="(" close=")" separator=",">
+            #{list}
+        </foreach>
+        AND r.device_type='fire_detector'
+        GROUP BY g.id,g.tag_name,g.desc
+        )t
+        WHERE COUNT=#{length}
+    </select>
+
+    <select id="getTagByRelationIdsWaterBusiness" resultType="java.util.HashMap">
+        SELECT id,Ename,Cname FROM (
+        SELECT COUNT(g.id) COUNT,g.tag_name Ename,g.desc Cname,g.id
+        FROM `water_project_category_relation` a
+        LEFT JOIN  `water_category_meter_relation` b ON a.category_id=b.category_id
+        LEFT JOIN `water_meter` e ON b.meter_id=e.id
+        LEFT JOIN `water_mode` m ON e.mode_id=m.id
+        LEFT JOIN `water_mode_tag_relation` gr ON m.id=gr.mode_id
+        LEFT JOIN `water_tag` g ON g.id=gr.tag_id
+        WHERE a.category_id IN
+        <foreach collection="list" item="list" index="index" open="(" close=")" separator=",">
+            #{list}
+        </foreach>
+        GROUP BY g.id,g.tag_name,g.desc
+        )t
+        WHERE COUNT=#{length}
+    </select>
+    <select id="getTagByRelationIdsElecBusiness" resultType="java.util.HashMap">
+        SELECT id,Ename,Cname FROM (
+        SELECT COUNT(g.id) COUNT,g.tag_name Ename,g.desc Cname,g.id
+        FROM `elec_project_category_relation` a
+        LEFT JOIN  `elec_category_meter_relation` b ON a.category_id=b.category_id
+        LEFT JOIN `elec_meter` e ON b.meter_id=e.id
+        LEFT JOIN `elec_mode` m ON e.mode_id=m.id
+        LEFT JOIN `elec_mode_tag_relation` gr ON m.id=gr.mode_id
+        LEFT JOIN `elec_tag` g ON g.id=gr.tag_id
+        WHERE a.category_id IN
+        <foreach collection="list" item="list" index="index" open="(" close=")" separator=",">
+            #{list}
+        </foreach>
+        GROUP BY g.id,g.tag_name,g.desc
+        )t
+        WHERE COUNT=#{length}
+
+    </select>
+    <select id="getTagByRelationIdsSmokeDetector" resultType="java.util.HashMap">
+        SELECT id,Ename,Cname,alerm_type_id FROM (
+        SELECT COUNT(g.id) COUNT,g.tag_name Ename,g.desc Cname,r.alerm_type_id,g.id
+        FROM `smoke_detector` e
+        LEFT JOIN `smoke_detector_tag_relation` gr ON gr.smoke_detector_id=e.id
+        LEFT JOIN `smoke_detector_tag` g ON g.id=gr.smoke_detector_tag_id
+        LEFT JOIN `device_info_relation` r ON r.id=e.id
+        WHERE r.device_type_relation_id IN
+        <foreach collection="list" item="list" index="index" open="(" close=")" separator=",">
+            #{list}
+        </foreach>
+        AND r.device_type='smoke_detector'
+        GROUP BY g.id,g.tag_name,g.desc
+        )t
+        WHERE COUNT=#{length}
+    </select>
+    <select id="getTagByRelationIdsImmersionDetector" resultType="java.util.HashMap">
+        SELECT id,Ename,Cname,alerm_type_id FROM (
+        SELECT COUNT(g.id) COUNT,g.tag_name Ename,g.desc Cname,r.alerm_type_id,g.id
+        FROM `immersion_detector` e
+        LEFT JOIN `immersion_detector_tag_relation` gr ON gr.immersion_detector_id=e.id
+        LEFT JOIN `immersion_detector_tag` g ON g.id=gr.immersion_detector_tag_id
+        LEFT JOIN `device_info_relation` r ON r.id=e.id
+        WHERE r.device_type_relation_id IN
+        <foreach collection="list" item="list" index="index" open="(" close=")" separator=",">
+            #{list}
+        </foreach>
+        AND r.device_type='immersion_detector'
+        GROUP BY g.id,g.tag_name,g.desc
+        )t
+        WHERE COUNT=#{length}
+    </select>
+
+
+
+    <!-- 保存 -->
+    <insert id="save">
+        insert into alerm_configer
+        (
+        project_id,
+        factory_id,
+        category,
+        config_level,
+        <choose>
+            <when test="code_use_name != 'water_business' and code_use_name != 'elec_business'">device_type_relation_id,</when>
+            <otherwise>category_id,</otherwise>
+        </choose>
+        tg_id,
+        tag,
+        is_effect,
+        config_desc,
+        <if test="position_val != null and position_val != ''">position_val,</if>
+        alerm_type,
+        config_type,
+        h_level1,h_level2,l_level1,l_level2
+        )
+        values
+        (
+        #{project_id},
+        #{factory_id},
+        #{category_id},
+        #{confLevel},
+        #{device_id},
+        <choose>
+            <when test="tg_id != null and tg_id != ''">#{tg_id},</when>
+            <otherwise>'',</otherwise>
+        </choose>
+        #{tag},
+        <choose>
+            <when test="is_effect != null and is_effect != ''">#{is_effect},</when>
+            <otherwise>1,</otherwise>
+        </choose>
+        #{confDesc},
+        <if test="position_val != null and position_val != ''">#{position_val},</if>
+        <choose>
+            <when test="alerm_type_id != null and alerm_type_id != ''">#{alerm_type_id},</when>
+            <otherwise>'',</otherwise>
+        </choose>
+        <choose>
+            <when test="parent_cate_id != null and parent_cate_id != ''">#{parent_cate_id},</when>
+            <otherwise>null,</otherwise>
+        </choose>
+        <choose>
+            <when test="hLevel1 != null and hLevel1 != ''">#{hLevel1},</when>
+            <otherwise>'',</otherwise>
+        </choose>
+        <choose>
+            <when test="hLevel2 != null and hLevel2 != ''">#{hLevel2},</when>
+            <otherwise>'',</otherwise>
+        </choose>
+        <choose>
+            <when test="lLevel1 != null and lLevel1 != ''">#{lLevel1},</when>
+            <otherwise>'',</otherwise>
+        </choose>
+        <choose>
+            <when test="lLevel2 != null and lLevel2 != ''">#{lLevel2}</when>
+            <otherwise>''</otherwise>
+        </choose>
+
+        )
+    </insert>
+    <!-- 修改 -->
+    <update id="update">
+        update alerm_configer
+        <set>
+            <if test="category_id!= null and category_id!=''">category= #{category_id},</if>
+            <if test="confLevel!= null  and confLevel!=''">config_level= #{confLevel},</if>
+            <if test="confDesc!=null  and confDesc!=''">config_desc= #{confDesc},</if>
+            <if test="parent_cate_id!=null  and parent_cate_id!=''">config_type= #{parent_cate_id},</if>
+            <if test="is_effect !=null  and is_effect !=''">is_effect= #{is_effect},</if>
+            <choose>
+                <when test="hLevel1!= null  and hLevel1!=''">h_level1=#{hLevel1},</when>
+                <otherwise>h_level1='',</otherwise>
+            </choose>
+            <choose>
+                <when test="hLevel2!= null  and hLevel2!=''">h_level2=#{hLevel2},</when>
+                <otherwise>h_level2='',</otherwise>
+            </choose>
+            <choose>
+                <when test="lLevel1!= null  and lLevel1!=''">l_level1=#{lLevel1},</when>
+                <otherwise>l_level1='',</otherwise>
+            </choose>
+            <choose>
+                <when test="lLevel2!= null  and lLevel2!=''">l_level2=#{lLevel2},</when>
+                <otherwise>l_level2='',</otherwise>
+            </choose>
+            <!-- <if test="position_val!= null and position_val!=''">position_val=
+                #{position_val} </if> -->
+            <choose>
+                <when test="position_val!= null  and position_val!=''">position_val=#{position_val}</when>
+                <otherwise>position_val=null</otherwise>
+            </choose>
+        </set>
+        where id=#{id}
+    </update>
+    <!-- 删除 -->
+    <delete id="delete">
+		delete from alerm_configer
+		where id=#{id}
+	</delete>
+
+
+
+    <!-- 查询是否存在 -->
+    <select id="selectIsExist" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM alerm_configer c
+        WHERE tag=#{tag}
+        AND c.device_type_relation_id IN
+        <foreach collection="list" item="list" index="index" open="(" close=")" separator=",">
+            #{list}
+        </foreach>
+    </select>
+    <!-- 查询Business是否存在 -->
+    <select id="selectIsExistBusiness" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM alerm_configer c
+        WHERE c.category_id IN
+        <foreach collection="list" item="list" index="index" open="(" close=")" separator=",">
+            #{list}
+        </foreach>
+        AND tag=#{tag}
+    </select>
+
+
+    <!-- 通过设备关系id获取tgid -->
+    <select id="getTgidByRelationId" resultType="java.util.HashMap">
+		SELECT d.tg_id FROM `device_info` d
+		LEFT JOIN `device_type` dt
+		ON dt.device_type=d.device_type
+		LEFT JOIN device_type_relation rl
+		ON rl.device_type_id=dt.id
+		AND
+		rl.device_id=d.id
+		WHERE rl.id=#{device_id}
+	</select>
+</mapper>

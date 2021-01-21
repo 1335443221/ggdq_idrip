@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sl.idripweb.dao.ElecAnalysisDao">
+
+    <!-- 获取 水电气 历史信息 -->
+    <select id="getDetailData" resultType="java.lang.String">
+        SELECT e.${dateType}
+        FROM ${categoryRelationTable} a
+        LEFT JOIN ${meterRelationTable} b ON a.category_id=b.category_id
+        LEFT JOIN ${dataTable} e on e.meter_id=b.meter_id AND e.`date` =  #{date}
+        WHERE a.project_id=#{project_id}
+        AND a.category_type_id=#{category_type}
+        AND a.parent_category_id=#{category_id}
+        <if test="factory_id != null and factory_id != '' and factory_id != 0">
+            AND a.factory_id=#{factory_id}
+        </if>
+        <if test="room_id != null and room_id != '' and room_id != 0">
+            AND a.${roomIdName}=#{room_id}
+        </if>
+    </select>
+
+
+    <!-- 获取 水电气 分类列表 -->
+    <select id="getCategoryMeterData" resultType="com.sl.idripweb.entity.elecAnalysis.CategoryMeterData">
+        SELECT a.category_id categoryId,a.parent_category_id parentCategoryId,a.category_name categoryName,cast(SUM(e.power) AS decimal(15,2)) as power
+        FROM ${categoryRelationTable} a
+        LEFT JOIN ${meterRelationTable} b ON a.category_id=b.category_id
+        LEFT JOIN ${dataTable} e ON e.meter_id=b.meter_id AND e.`date` =  #{date}
+        WHERE a.project_id=#{project_id}
+        AND a.category_type_id=#{category_type}
+        AND a.parent_category_id=#{category_id}
+        <if test="factory_id != null and factory_id != '' and factory_id != 0">
+            AND a.factory_id=#{factory_id}
+        </if>
+        <if test="room_id != null and room_id != '' and room_id != 0">
+            AND a.${roomIdName}=#{room_id}
+        </if>
+        GROUP BY  a.category_id
+    </select>
+
+
+    <!-- 获取 水电气 分类列表 -->
+    <select id="getCategoryMeterDataTree" resultType="com.sl.idripweb.entity.elecAnalysis.CategoryMeterData">
+        SELECT a.category_id categoryId,a.parent_category_id parentCategoryId,a.category_name categoryName,e.power,e.${dateType} AS detail
+        FROM ${categoryRelationTable} a
+        LEFT JOIN ${meterRelationTable} b ON a.category_id=b.category_id
+        LEFT JOIN ${dataTable} e ON e.meter_id=b.meter_id AND e.`date` =  #{date}
+        WHERE a.project_id=#{project_id}
+        AND a.category_type_id=#{category_type}
+        <if test="factory_id != null and factory_id != '' and factory_id != 0">
+            AND a.factory_id=#{factory_id}
+        </if>
+        <if test="room_id != null and room_id != '' and room_id != 0">
+            AND a.${roomIdName}=#{room_id}
+        </if>
+    </select>
+
+
+    <!-- 获取 水电气 分类列表 -->
+    <select id="getLoadRateData" resultType="java.util.Map">
+        SELECT t.voltage_level,d.detail FROM elec_transformer t
+        LEFT JOIN  `elec_meter` m  ON t.low_meter_id=m.id
+        LEFT JOIN `day_data_electag` d ON m.id=d.meter_id
+        LEFT JOIN `elec_tag` et ON d.tag_id=et.id
+        WHERE t.project_id=#{project_id}
+        AND et.tag_name = 'loadrate'
+        AND d.date=#{date}
+        AND t.id=#{transformer_id}
+    </select>
+
+    <!-- 获取 变压器 -->
+    <select id="getLoadRate" resultType="java.util.Map">
+        SELECT t.voltage_level FROM elec_transformer t
+        WHERE t.project_id=#{project_id}
+        AND t.id=#{transformer_id}
+    </select>
+
+
+    <!-- 获取 水电气 分类列表 -->
+    <select id="getPAndQData" resultType="java.util.Map">
+        SELECT d.detail,et.tag_name FROM elec_transformer t
+        LEFT JOIN  `elec_meter` m  ON t.low_meter_id=m.id
+        LEFT JOIN `day_data_electag` d ON m.id=d.meter_id
+        LEFT JOIN `elec_tag` et ON d.tag_id=et.id
+        WHERE t.project_id=#{project_id}
+        AND et.tag_name IN ('p','q')
+        AND d.date=#{date}
+        AND t.id=#{transformer_id}
+    </select>
+</mapper>

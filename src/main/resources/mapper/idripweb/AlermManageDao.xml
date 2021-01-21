@@ -1,0 +1,503 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sl.idripweb.dao.AlermManageDao">
+
+
+    <!-- 查询数据 -->
+    <select id="getAlermData" resultType="java.util.Map">
+        SELECT  * from (
+        SELECT l.id,l.level,l.location,l.th,l.`value`,l.category,l.category_name,
+        l.operater,
+        DATE_FORMAT(l.confirm_time, '%Y-%m-%d %k:%i:%s') AS confirm_time,
+        CASE
+        is_deal
+        WHEN '1' THEN 'true'
+        WHEN '0' THEN 'false'
+        ELSE is_deal END
+        is_deal,
+        CASE is_register
+        WHEN '1' THEN 'true'
+        WHEN '0' THEN 'false'
+        ELSE
+        is_register END is_register,
+        DATE_FORMAT(log_time, '%Y-%m-%d %H:%i:%s')
+        AS log_time,
+        room.name roomName,
+        CASE alt.type_English_name
+        WHEN 'water_business' THEN ac2.config_desc
+        WHEN 'elec_business' THEN ac2.config_desc
+        ELSE ac.config_desc END config_desc,
+        CASE alt.type_English_name
+        WHEN 'water_business' THEN wpcr.category_name
+        WHEN 'elec_business' THEN epcr.category_name
+        ELSE d.name END device_name,
+        CASE alt.type_English_name
+        WHEN 'water_business' THEN wpcr.category_name
+        WHEN 'elec_business' THEN epcr.category_name
+        ELSE '' END business_name,
+        alt.id alerm_type,
+        pf.factory_name FROM
+        (
+        (SELECT l.id,l.level,l.location,l.th,l.VALUE,l.category,l.operater,l.confirm_time,l.is_deal,l.is_register,l.log_time,l.factory_id ,l.device_type_relation_id ,l.tag,l.category_id ,l.room_id,l.alerm_type,c1.category_name FROM `logs` l
+        LEFT JOIN alerm_category_n1 c1 ON c1.id=l.category
+        LEFT JOIN alerm_category_n2 c2 ON c1.category2_id=c2.id
+        LEFT JOIN alerm_category_n3 c3 ON c2.category3_id=c3.id
+
+        WHERE c3.is_display=1 AND l.category !=9999 AND project_id=#{project_id}
+        <if test="category != null and category != '' and category != 0">
+            AND c2.id=#{category}
+        </if>
+        <if test="btime != null and btime != ''">
+            AND l.log_time <![CDATA[>=]]>#{btime}
+        </if>
+        <if test="etime != null and etime != ''">
+            AND l.log_time  <![CDATA[<=]]>#{etime}
+        </if>
+        <if test="isdeal != null and isdeal != ''">
+            AND l.is_deal=#{isdeal}
+        </if>
+        <if test="factory_id != null and factory_id != '' and factory_id !=0">
+            AND l.factory_id = #{factory_id}
+        </if>
+        ORDER BY l.log_time DESC
+        )
+        UNION ALL
+        (SELECT h.id,h.LEVEL,h.location,h.th,h.VALUE,h.category,h.operater,h.confirm_time,h.is_deal,h.is_register,h.log_time,h.factory_id,h.device_type_relation_id ,h.tag ,h.category_id ,h.room_id,h.alerm_type,c1.category_name FROM `logs_history` h
+        LEFT JOIN alerm_category_n1 c1 ON c1.id=h.category
+        LEFT JOIN alerm_category_n2 c2 ON c1.category2_id=c2.id
+        LEFT JOIN alerm_category_n3 c3 ON c2.category3_id=c3.id
+
+        WHERE c3.is_display=1
+        AND h.category !=9999
+        AND project_id=#{project_id}
+        <if test="category != null and category != '' and category != 0">
+            AND c2.id=#{category}
+        </if>
+        <if test="btime != null and btime != ''">
+            AND h.log_time <![CDATA[>=]]>#{btime}
+        </if>
+        <if test="etime != null and etime != ''">
+            AND h.log_time  <![CDATA[<=]]>#{etime}
+        </if>
+        <if test="isdeal != null and isdeal != ''">
+            AND h.is_deal=#{isdeal}
+        </if>
+        <if test="factory_id != null and factory_id != '' and factory_id !=0">
+            AND h.factory_id = #{factory_id}
+        </if>
+        ORDER BY h.log_time DESC
+        )
+        ORDER BY log_time DESC
+        )l
+        LEFT JOIN `project_factory` pf ON pf.id=l.factory_id
+        LEFT JOIN `alerm_configer` ac ON ac.device_type_relation_id=l.device_type_relation_id AND ac.tag=l.tag
+        LEFT JOIN `alerm_configer` ac2 ON ac2.category_id=l.category_id AND ac2.tag=l.tag
+        LEFT JOIN `room_info_relation` room ON l.room_id=room.room_id AND room.alerm_type_id=l.alerm_type
+        LEFT JOIN `device_info_relation` d ON l.device_type_relation_id=d.device_type_relation_id
+        LEFT JOIN alerm_type alt ON alt.id=l.alerm_type
+        LEFT JOIN `water_project_category_relation` wpcr ON wpcr.category_id=l.category_id
+        LEFT JOIN `elec_project_category_relation` epcr ON epcr.category_id=l.category_id
+        )ll
+        <if test="business_name != null and business_name != ''">
+            WHERE  ll.device_name  LIKE  CONCAT('%',#{business_name},'%')
+            AND (ll.alerm_type=7 OR ll.alerm_type=8)
+        </if>
+        LIMIT #{fromNum},#{pagSize}
+    </select>
+
+
+
+    <!-- 获取查询总条数 -->
+    <select id="getAlermDataCount" resultType="java.lang.Integer">
+        SELECT  COUNT(*) from (
+        SELECT
+        CASE alt.type_English_name
+        WHEN 'water_business' THEN wpcr.category_name
+        WHEN 'elec_business' THEN epcr.category_name
+        ELSE d.name END device_name,alt.id alerm_type
+        FROM
+        (
+        (SELECT l.id,l.level,l.location,l.th,l.VALUE,l.category,l.operater,l.confirm_time,l.is_deal,l.is_register,l.log_time,l.factory_id ,l.device_type_relation_id ,l.tag,l.category_id ,l.room_id,l.alerm_type,c1.category_name FROM `logs` l
+        LEFT JOIN alerm_category_n1 c1 ON c1.id=l.category
+        LEFT JOIN alerm_category_n2 c2 ON c1.category2_id=c2.id
+        LEFT JOIN alerm_category_n3 c3 ON c2.category3_id=c3.id
+
+        WHERE c3.is_display=1 AND l.category !=9999 AND project_id=#{project_id}
+        <if test="category != null and category != '' and category != 0">
+            AND c2.id=#{category}
+        </if>
+        <if test="btime != null and btime != ''">
+            AND l.log_time <![CDATA[>=]]>#{btime}
+        </if>
+        <if test="etime != null and etime != ''">
+            AND l.log_time  <![CDATA[<=]]>#{etime}
+        </if>
+        <if test="isdeal != null and isdeal != ''">
+            AND l.is_deal=#{isdeal}
+        </if>
+        <if test="factory_id != null and factory_id != '' and factory_id !=0">
+            AND l.factory_id = #{factory_id}
+        </if>
+        ORDER BY l.log_time DESC
+        )
+        UNION ALL
+        (SELECT h.id,h.LEVEL,h.location,h.th,h.VALUE,h.category,h.operater,h.confirm_time,h.is_deal,h.is_register,h.log_time,h.factory_id,h.device_type_relation_id ,h.tag ,h.category_id ,h.room_id,h.alerm_type,c1.category_name FROM `logs_history` h
+        LEFT JOIN alerm_category_n1 c1 ON c1.id=h.category
+        LEFT JOIN alerm_category_n2 c2 ON c1.category2_id=c2.id
+        LEFT JOIN alerm_category_n3 c3 ON c2.category3_id=c3.id
+
+        WHERE c3.is_display=1
+        AND h.category !=9999
+        AND project_id=#{project_id}
+        <if test="category != null and category != '' and category != 0">
+            AND c2.id=#{category}
+        </if>
+        <if test="btime != null and btime != ''">
+            AND h.log_time <![CDATA[>=]]>#{btime}
+        </if>
+        <if test="etime != null and etime != ''">
+            AND h.log_time  <![CDATA[<=]]>#{etime}
+        </if>
+        <if test="isdeal != null and isdeal != ''">
+            AND h.is_deal=#{isdeal}
+        </if>
+        <if test="factory_id != null and factory_id != '' and factory_id !=0">
+            AND h.factory_id = #{factory_id}
+        </if>
+        ORDER BY h.log_time DESC
+        )
+        )l
+        LEFT JOIN alerm_type alt ON alt.id=l.alerm_type
+        LEFT JOIN `water_project_category_relation` wpcr ON wpcr.category_id=l.category_id
+        LEFT JOIN `elec_project_category_relation` epcr ON epcr.category_id=l.category_id
+        LEFT JOIN `device_info_relation` d ON l.device_type_relation_id=d.device_type_relation_id
+        )ll
+        <if test="business_name != null and business_name != ''">
+            WHERE  ll.device_name  LIKE  CONCAT('%',#{business_name},'%')
+            AND (ll.alerm_type=7 OR ll.alerm_type=8)
+        </if>
+    </select>
+
+
+    <!-- 查询分类 -->
+    <select id="getAlermCategoryByPeoject" resultType="java.util.Map">
+		select r.category2_id id,c2.category_name categoryName from
+		project_alerm_catrgory_relation r
+		LEFT JOIN alerm_category_n2 c2 ON r.category2_id=c2.id
+		WHERE project_id=#{project_id}
+	</select>
+
+
+    <!-- 报警类别 -->
+    <select id="getAlermCategoryN3" resultType="java.util.Map">
+		select id,category_name config_name from `alerm_category_n3`
+		where is_display=1
+	</select>
+
+    <!-- 获取所有商户名称 -->
+    <select id="getAllBusinessName" resultType="java.util.Map">
+        SELECT DISTINCT business_name FROM (
+        SELECT category_name business_name FROM `elec_project_category_relation` r
+        LEFT JOIN `elec_category_type` ect
+        ON ect.id=r.category_type_id
+        WHERE ect.code_use_name='shanghu_elec'
+        AND parent_category_id=0
+        AND r.project_id=#{project_id}
+        <if test="factory_id != null and factory_id  != ''  and factory_id  != 0">
+            and r.factory_id = #{factory_id}
+        </if>
+        UNION
+        SELECT category_name business_name FROM `water_project_category_relation` r
+        LEFT JOIN `water_category_type` ect
+        ON ect.id=r.category_type_id
+        WHERE ect.code_use_name='shanghu_water'
+        AND parent_category_id=0
+        AND r.project_id=#{project_id}
+        <if test="factory_id != null and factory_id  != '' and factory_id  != 0">
+            and r.factory_id = #{factory_id}
+        </if>
+        )t
+    </select>
+
+
+    <!-- 园区列表 -->
+    <select id="getFactoryByProjectid" resultType="java.util.HashMap">
+        SELECT f.id,f.factory_name name FROM `project_factory` f
+        where f.project_id=#{project_id}
+    </select>
+
+    <!-- 报警处理 -->
+    <select id="queryDealDetail" resultType="java.util.HashMap">
+		select lid,mark_msg,repa_msg from alerm_mark_mesg
+		where lid=#{lid}
+	</select>
+
+    <insert id="saveDeal">
+		insert into alerm_mark_mesg
+		(`lid`,`mark_msg`)
+		values
+		(#{logid},#{msg})
+	</insert>
+
+    <update id="updateDeal">
+		update alerm_mark_mesg
+		set mark_msg=#{msg}
+		where
+		lid=#{logid}
+	</update>
+
+    <select id="selectAlermById" parameterType="java.util.Map" resultType="java.util.Map">
+        SELECT
+        l.id,
+        l.level, l.tg_id,
+        l.location,l.room_id,l.factory_id,l.device_type_relation_id,
+        l.project_id, l.tag,
+        l.vtss, l.category,
+        l.th,l.`value`,
+        l.log_time,l.is_register, l.is_popup,l.is_push,l.category_id,
+        l.is_delete,l.alerm_type,al.timely_time
+        FROM
+        `logs` l
+        LEFT JOIN `alerm_level` al
+        on l.level=al.level and l.project_id=al.project_id
+        WHERE l.id=#{lid}
+    </select>
+
+
+    <insert id="insertAllHistory" parameterType="java.util.HashMap">
+        INSERT INTO
+        `logs_history`
+        (
+        id, `level`, tg_id, location,
+        room_id,factory_id,device_type_relation_id,
+        project_id, tag, vtss,
+        category,th,`value`, operater, confirm_time,log_time,
+        is_deal,is_register,is_popup,is_push,category_id,
+        is_delete,alerm_type,is_timely
+        )
+        values
+        <foreach collection ="list" item="alerm" index= "index" separator =",">
+            (
+            #{alerm.id},#{alerm.level},#{alerm.tg_id},#{alerm.location},
+            #{alerm.room_id},#{alerm.factory_id},#{alerm.device_type_relation_id},
+            #{alerm.project_id},#{alerm.tag},#{alerm.vtss},
+            #{alerm.category},#{alerm.th},#{alerm.value},#{alerm.operater}, NOW(),#{alerm.log_time},
+            1,#{alerm.is_register},#{alerm.is_popup},#{alerm.is_push},#{alerm.category_id},
+            #{alerm.is_delete},#{alerm.alerm_type},#{alerm.is_timely}
+            )
+        </foreach >
+    </insert>
+
+
+    <delete id="deleteLog">
+		delete from logs where id = #{lid}
+	</delete>
+
+    <update id="updateIsRegister">
+		update logs
+		set is_register=1
+		where id=#{lid}
+	</update>
+    <update id="updateIsRegisterHistory">
+		update logs_history
+		set is_register=1
+		where id=#{lid}
+	</update>
+
+
+    <insert id="saveRepairMsg">
+		insert into alerm_mark_mesg
+		(`lid`,`repa_msg`)
+		values
+		(#{logid},#{msg})
+	</insert>
+    <update id="updateRepairMsg">
+		update alerm_mark_mesg
+		set repa_msg=#{msg}
+		where
+		lid=#{logid}
+	</update>
+
+
+    <!-- 获取报警弹窗数据分页 -->
+    <select id="getPopupData" resultType="java.util.HashMap">
+        SELECT l.id,l.level,c.category_name,DATE_FORMAT(l.log_time,'%Y-%m-%d %H:%i:%s') AS log_time,l.th,l.`value`,
+		CASE alt.type_English_name
+        WHEN 'water_business' THEN ac2.config_desc
+        WHEN 'elec_business' THEN ac2.config_desc
+        ELSE ac.config_desc END config_desc,
+        CASE alt.type_English_name
+        WHEN 'water_business' THEN wpcr.category_name
+        WHEN 'elec_business' THEN epcr.category_name
+        ELSE r.name END device_name,
+        rr.name AS room_name,
+        l.location
+        FROM `logs` l
+        LEFT JOIN alerm_type alt ON alt.id=l.alerm_type
+
+        LEFT JOIN room_info_relation rr ON rr.alerm_type_id=l.alerm_type AND l.room_id=rr.room_id
+
+        LEFT JOIN `alerm_configer` ac ON l.device_type_relation_id=ac.device_type_relation_id AND l.tag=ac.tag
+        LEFT JOIN `alerm_configer` ac2 ON ac2.category_id=l.category_id AND ac2.tag=l.tag
+        LEFT JOIN device_info_relation r ON r.device_type_relation_id=l.device_type_relation_id
+        LEFT JOIN `alerm_category_n1` c ON l.category=c.id
+        LEFT JOIN alerm_category_n2 c2 ON c.category2_id=c2.id
+        LEFT JOIN alerm_category_n3 c3 ON c2.category3_id=c3.id
+        LEFT JOIN `water_project_category_relation` wpcr ON wpcr.category_id=l.category_id
+        LEFT JOIN `elec_project_category_relation` epcr ON epcr.category_id=l.category_id
+
+        WHERE is_popup=1
+        AND l.category !=9999
+        AND c3.category_code !='communication_alarm'
+        AND l.project_id=#{project_id}
+         limit #{fromNum},#{pagSize}
+    </select>
+
+
+    <!-- 获取报警弹窗数据all -->
+    <select id="getPopupDataCount" resultType="java.lang.Integer">
+        SELECT COUNT(*) totalCount
+        FROM `logs` l
+        LEFT JOIN device_info_relation r ON r.device_type_relation_id=l.device_type_relation_id
+        LEFT JOIN `alerm_category_n1` c ON l.category=c.id
+        LEFT JOIN alerm_category_n2 c2 ON c.category2_id=c2.id
+        LEFT JOIN alerm_category_n3 c3 ON c2.category3_id=c3.id
+        WHERE is_popup=1
+        AND l.category !=9999
+        AND c3.category_code !='communication_alarm'
+        AND l.project_id=#{project_id}
+    </select>
+
+
+    <update id="confirm">
+        UPDATE `logs` SET is_popup=0
+        WHERE id IN
+        <foreach collection="list" item="list" index="index" open="(" close=")" separator=",">
+            #{list}
+        </foreach>
+    </update>
+
+
+
+    <!-- 报警打印-->
+    <select id="printAlerm" resultType="java.util.Map">
+        SELECT * FROM (
+
+        SELECT l.id,l.level,l.location,l.th,l.`value`,l.category,l.category_name,
+        l.operater,
+        DATE_FORMAT(l.confirm_time, '%Y-%m-%d %k:%i:%s') AS confirm_time,
+        CASE
+        is_deal
+        WHEN '1' THEN 'true'
+        WHEN '0' THEN 'false'
+        ELSE is_deal END
+        is_deal,
+        CASE
+        is_deal
+        WHEN '1' THEN '已处理'
+        WHEN '0' THEN '未处理'
+        ELSE is_deal END
+        dealName,
+        CASE is_register
+        WHEN '1' THEN 'true'
+        WHEN '0' THEN 'false'
+        ELSE
+        is_register END is_register,
+        DATE_FORMAT(log_time, '%Y-%m-%d %H:%i:%s')
+        AS log_time ,
+        room.name roomName,
+        d.name device_name,
+        CASE alt.type_English_name
+        WHEN 'water_business' THEN ac.config_desc
+        WHEN 'elec_business' THEN ac.config_desc
+        ELSE ac.config_desc END config_desc,
+        CASE alt.type_English_name
+        WHEN 'water_business' THEN wpcr.category_name
+        WHEN 'elec_business' THEN epcr.category_name
+        ELSE '' END business_name,
+        pf.factory_name FROM
+        (
+        (SELECT
+        l.id,l.level,l.location,l.th,l.VALUE,l.category,l.operater,l.confirm_time,l.is_deal,l.is_register,l.log_time,l.factory_id
+        ,l.device_type_relation_id ,l.tag,l.category_id ,l.room_id,l.alerm_type,c1.category_name FROM `logs` l
+        LEFT JOIN alerm_category_n1 c1 ON c1.id=l.category
+        LEFT JOIN alerm_category_n2 c2 ON c1.category2_id=c2.id
+        LEFT JOIN alerm_category_n3 c3 ON c2.category3_id=c3.id
+
+        WHERE c3.is_display=1
+        AND l.category !=9999
+        AND project_id=#{project_id}
+        <if test="category != null and category != '' and category != 0">
+            AND c2.id=#{category}
+        </if>
+        <if test="btime != null and btime != ''">
+            AND l.log_time <![CDATA[>=]]>#{btime}
+        </if>
+        <if test="etime != null and etime != ''">
+            AND l.log_time  <![CDATA[<=]]>#{etime}
+        </if>
+        <if test="isdeal != null and isdeal != ''">
+            AND l.is_deal=#{isdeal}
+        </if>
+        <if test="factory_id != null and factory_id != '' and factory_id !=0">
+            AND l.factory_id = #{factory_id}
+        </if>
+        ORDER BY l.log_time DESC
+        )
+        UNION ALL
+        (SELECT
+        h.id,h.LEVEL,h.location,h.th,h.VALUE,h.category,h.operater,h.confirm_time,h.is_deal,h.is_register,h.log_time,h.factory_id,h.device_type_relation_id
+        ,h.tag ,h.category_id ,h.room_id,h.alerm_type,c1.category_name FROM `logs_history` h
+        LEFT JOIN alerm_category_n1 c1 ON c1.id=h.category
+        LEFT JOIN alerm_category_n2 c2 ON c1.category2_id=c2.id
+        LEFT JOIN alerm_category_n3 c3 ON c2.category3_id=c3.id
+
+        WHERE c3.is_display=1
+        AND h.category !=9999
+        AND project_id=#{project_id}
+        <if test="category != null and category != '' and category != 0">
+            AND c2.id=#{category}
+        </if>
+        <if test="btime != null and btime != ''">
+            AND h.log_time <![CDATA[>=]]>#{btime}
+        </if>
+        <if test="etime != null and etime != ''">
+            AND h.log_time  <![CDATA[<=]]>#{etime}
+        </if>
+        <if test="isdeal != null and isdeal != ''">
+            AND h.is_deal=#{isdeal}
+        </if>
+        <if test="factory_id != null and factory_id != '' and factory_id !=0">
+            AND h.factory_id = #{factory_id}
+        </if>
+        ORDER BY h.log_time DESC
+        )
+        )l
+        LEFT JOIN `project_factory` pf ON pf.id=l.factory_id
+        LEFT JOIN `alerm_configer` ac ON ac.device_type_relation_id=l.device_type_relation_id AND ac.tag=l.tag
+        LEFT JOIN `room_info_relation` room ON l.room_id=room.room_id AND room.alerm_type_id=l.alerm_type
+        LEFT JOIN `device_info_relation` d ON l.device_type_relation_id=d.device_type_relation_id
+        LEFT JOIN alerm_type alt ON alt.id=l.alerm_type
+        LEFT JOIN `water_project_category_relation` wpcr ON wpcr.category_id=l.category_id
+        LEFT JOIN `elec_project_category_relation` epcr ON epcr.category_id=l.category_id
+        )ll
+        <if test="business_name != null and business_name != ''">
+            WHERE ll.business_name  LIKE CONCAT('%',#{business_name},'%')
+        </if>
+        ORDER BY ll.log_time DESC
+    </select>
+
+    <!-- 获取报警类别byid -->
+    <select id="getAlermCateGoryByid" resultType="java.util.Map">
+		SELECT
+		id,category_name FROM `alerm_category_n2`
+		WHERE id=#{category}
+	</select>
+    <!-- 获取厂区byid -->
+    <select id="getFactoryByid" resultType="java.util.Map">
+		SELECT id,factory_name
+		FROM `project_factory`
+		WHERE id=#{factory_id}
+	</select>
+</mapper>

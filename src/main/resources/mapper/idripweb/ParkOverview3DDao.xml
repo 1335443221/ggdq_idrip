@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sl.idripweb.dao.ParkOverview3DDao">
+
+    <!-- 查询 能耗信息 -->
+    <select id="transformerroomEnergyData" resultType="java.lang.Double">
+        SELECT IFNULL(SUM(power),0)  AS power FROM (SELECT a.* FROM `elec_project_category_relation` a
+        LEFT JOIN `elec_project_category_relation` b ON a.category_id=b.parent_category_id
+        WHERE a.transformerroom_id=#{room_id}
+        AND a.project_id=#{project_id}
+        AND a.category_type_id=2
+        AND b.id is NULL)aa
+        LEFT JOIN `elec_category_meter_relation` bb ON aa.category_id=bb.category_id
+        LEFT JOIN `day_data_ep` e ON bb.meter_id=e.meter_id AND e.date=#{date}
+    </select>
+
+    <!-- 获取控温表 -->
+    <select id="getTemperatureController" resultType="java.util.Map">
+        SELECT * FROM `temperature_controller` a
+        WHERE a.transformerroom_id=#{room_id}
+    </select>
+
+</mapper>

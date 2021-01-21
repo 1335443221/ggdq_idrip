@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sl.idripweb.dao.ElecReportDao">
+
+    <!-- 获取 水电气 分类列表 -->
+    <select id="getCategoryList" resultType="java.util.Map">
+        SELECT a.category_id,a.parent_category_id,a.category_name,b.meter_id,c.device_name
+        FROM ${categoryRelationTable} a
+        LEFT JOIN ${meterRelationTable} b ON a.category_id=b.category_id
+        LEFT JOIN ${meterTable} c ON b.meter_id=c.id
+        WHERE a.category_type_id=#{category_type}
+        AND a.project_id=#{project_id}
+        ORDER BY a.category_id
+    </select>
+
+    <!-- 获取 水电气 分类列表 -->
+    <select id="getEpData" resultType="java.util.Map">
+       SELECT a.meter_id,b.device_name,a.${dateType} detail,power,CAST(`date` AS CHAR) as `date`
+        FROM ${dataTable} a
+        LEFT JOIN ${meterTable} b ON a.meter_id=b.id
+        WHERE b.device_name IN
+        <foreach collection="deviceNameList" item="list" index="index" open="(" close=")" separator=",">
+            #{list}
+        </foreach>
+		AND a.date BETWEEN #{date_from} AND #{date_to}
+    </select>
+
+
+</mapper>

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sl.common.dao.CacheDao">
+
+
+	<!-- 获取电表 -->
+	<select id="getElecMeter" resultType="java.util.HashMap">
+		SELECT e.tg_id,e.device_name,e.id device_id,e.desc device_desc,'elec_meter' AS device_type,p.dsc,p.name panelName,p.sub_type AS panel_type
+		FROM `elec_meter` e
+		LEFT JOIN `elec_category_meter_relation`  mr ON mr.meter_id=e.id
+		LEFT JOIN `elec_project_category_relation` cr ON mr.category_id=cr.category_id
+		LEFT JOIN panel p ON p.id=e.panel_id
+		WHERE cr.category_type_id=#{categoryTypeId}
+		AND e.project_id=#{projectId}
+		<if test="factoryId != null and factoryId != ''">
+			and e.factory_id = #{factoryId}
+		</if>
+		<if test="transformerroomId != null and transformerroomId != ''">
+			and e.transformerroom_id = #{transformerroomId}
+		</if>
+
+		UNION SELECT t.tg_id,t.device_name,t.id device_id,t.desc device_desc,'elec_transformer' AS device_type,p.dsc,p.name panelName,p.sub_type AS panel_type
+		FROM `elec_transformer` e
+		LEFT JOIN `elec_category_meter_relation`  mr ON mr.meter_id=e.id
+		LEFT JOIN `elec_project_category_relation` cr ON mr.category_id=cr.category_id
+		LEFT JOIN `temperature_controller` t ON t.id=e.temperature_controller_id
+		LEFT JOIN panel p ON p.id=e.panel_id
+		WHERE cr.category_type_id=#{categoryTypeId}
+		and e.project_id=#{projectId}
+		<if test="factoryId != null and factoryId != ''">
+			and e.factory_id = #{factoryId}
+		</if>
+		<if test="transformerroomId != null and transformerroomId != ''">
+			and e.transformerroom_id = #{transformerroomId}
+		</if>
+	</select>
+
+
+	<!-- 获取标签 -->
+	<select id="getElecTag" resultType="java.util.HashMap">
+        select id,tag_name,e.desc tag_desc from `elec_tag` e
+        order by  id ASC
+    </select>
+
+
+	<!-- 设备排序 -->
+	<select id="getSortData" resultType="java.util.HashMap">
+		SELECT a.id ,a.category_type_id, a.sort_device_names, a.num_per_line,a.to_panel, a.route_type
+		FROM  `elec_sort_route` a
+		WHERE a.project_id=#{projectId}
+		<if test="factoryId != null and factoryId != ''">
+			AND a.factory_id = #{factoryId}
+		</if>
+		<if test="transformerroomId != null and transformerroomId != ''">
+			AND a.transformerroom_id = #{transformerroomId}
+		</if>
+		<if test="categoryTypeId != null and categoryTypeId != ''">
+			AND a.category_type_id = #{categoryTypeId}
+		</if>
+	</select>
+
+
+</mapper>

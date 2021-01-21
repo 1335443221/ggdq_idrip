@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sl.idripweb.dao.SynthesizeEnergyListDao">
+
+    <!--获取需要展示的地图上厂区-->
+    <select id="getElecCategoryCount" resultType="java.lang.Integer">
+        SELECT
+            count(epcr.category_id)
+        FROM
+            elec_project_category_relation AS epcr
+            LEFT JOIN elec_category AS ec ON epcr.category_id = ec.id
+        WHERE
+            epcr.project_id = #{project_id}
+            AND epcr.factory_id = #{factory_id}
+            AND ec.category_type = 2
+    </select>
+
+    <!--计算水泵房数量-->
+    <select id="getWaterCategoryCount" resultType="java.lang.Integer">
+        SELECT
+            count(wpcr.category_id)
+        FROM
+            water_project_category_relation AS wpcr
+            LEFT JOIN water_category AS wc ON wpcr.category_id = wc.id
+        WHERE
+            wpcr.project_id = #{project_id}
+            AND wpcr.factory_id = #{factory_id}
+            AND wc.category_type = 2
+    </select>
+
+    <!--计算燃气调压站数量-->
+    <select id="getGasCategoryCount" resultType="java.lang.Integer">
+        SELECT
+            count(gpcr.category_id)
+        FROM
+            gas_project_category_relation AS gpcr
+            LEFT JOIN gas_category AS gc ON gpcr.category_id = gc.id
+        WHERE
+            gpcr.project_id = #{project_id}
+            AND gpcr.factory_id = #{factory_id}
+            AND gc.category_type = 2
+    </select>
+
+    <!--计算电表数量-->
+    <select id="getElecMeterCount" resultType="java.lang.Integer">
+        SELECT
+	        count( DISTINCT ecmr.meter_id ) AS meter_ids
+        FROM
+            elec_category_meter_relation AS ecmr
+            LEFT JOIN elec_project_category_relation AS epcr ON ecmr.category_id = epcr.category_id
+        WHERE
+            ecmr.project_id = #{project_id}
+            AND epcr.factory_id = #{factory_id}
+    </select>
+
+    <!--计算水表数量-->
+    <select id="getWaterMeterCount" resultType="java.lang.Integer">
+        SELECT
+            count( DISTINCT wcmr.meter_id ) AS meter_ids
+        FROM
+            water_category_meter_relation AS wcmr
+            LEFT JOIN water_project_category_relation AS wpcr ON wcmr.category_id = wpcr.category_id
+        WHERE
+            wcmr.project_id = #{project_id}
+            AND wpcr.factory_id = #{factory_id}
+    </select>
+
+    <!--计算燃气表数量-->
+    <select id="getGasMeterCount" resultType="java.lang.Integer">
+        SELECT
+            count( DISTINCT gcmr.meter_id ) AS meter_ids
+        FROM
+            gas_category_meter_relation AS gcmr
+            LEFT JOIN gas_project_category_relation AS gpcr ON gcmr.category_id = gpcr.category_id
+        WHERE
+            gcmr.project_id = #{project_id}
+            AND gpcr.factory_id = #{factory_id}
+    </select>
+
+    <!--计算电-年数据-->
+    <select id="getElecYearData" resultType="java.lang.Double">
+        SELECT
+            ROUND(sum(power),2)
+        FROM
+            year_data_ep
+        WHERE
+            date = #{date_to_year}
+            <if test="meter_ids != null">
+                AND meter_id IN
+                <foreach collection="meter_ids" item="id" index="index" open="(" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+    </select>
+
+    <!--计算电-月数据-->
+    <select id="getElecMonthData" resultType="java.lang.Double">
+        SELECT
+            ROUND(sum(power),2)
+        FROM
+            month_data_ep
+        WHERE
+            date = #{date_to_month}
+            <if test="meter_ids != null">
+                AND meter_id IN
+                <foreach collection="meter_ids" item="id" index="index" open="(" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+    </select>
+
+    <!--计算电-天数据-->
+    <select id="getElecDayData" resultType="java.lang.String">
+        SELECT
+            power_per_hour
+        FROM
+            day_data_ep
+        WHERE
+            date = #{date}
+            <if test="meter_ids != null">
+                AND meter_id IN
+                <foreach collection="meter_ids" item="id" index="index" open="(" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+    </select>
+
+    <!--计算水-年数据-->
+    <select id="getWaterYearData" resultType="java.lang.Double">
+        SELECT
+            ROUND(sum(power),2)
+        FROM
+            year_data_qf
+        WHERE
+            date = #{date_to_year}
+            <if test="meter_ids != null">
+                AND meter_id IN
+                <foreach collection="meter_ids" item="id" index="index" open="(" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+    </select>
+
+    <!--计算水-月数据-->
+    <select id="getWaterMonthData" resultType="java.lang.Double">
+        SELECT
+            ROUND(sum(power),2)
+        FROM
+            month_data_qf
+        WHERE
+            date = #{date_to_month}
+            <if test="meter_ids != null">
+                AND meter_id IN
+                <foreach collection="meter_ids" item="id" index="index" open="(" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+    </select>
+
+    <!--计算水-天数据-->
+    <select id="getWaterDayData" resultType="java.lang.String">
+        SELECT
+            power_per_hour
+        FROM
+            day_data_qf
+        WHERE
+            date = #{date}
+            <if test="meter_ids != null">
+                AND meter_id IN
+                <foreach collection="meter_ids" item="id" index="index" open="(" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+    </select>
+
+    <!--计算气-年数据-->
+    <select id="getGasYearData" resultType="java.lang.Double">
+        SELECT
+            ROUND(sum(power),2)
+        FROM
+            year_data_gqf
+        WHERE
+            date = #{date_to_year}
+            <if test="meter_ids != null">
+                AND meter_id IN
+                <foreach collection="meter_ids" item="id" index="index" open="(" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+    </select>
+
+    <!--计算气-月数据-->
+    <select id="getGasMonthData" resultType="java.lang.Double">
+        SELECT
+            ROUND(sum(power),2)
+        FROM
+            month_data_gqf
+        WHERE
+            date = #{date_to_month}
+            <if test="meter_ids != null">
+                AND meter_id IN
+                <foreach collection="meter_ids" item="id" index="index" open="(" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+    </select>
+
+    <!--计算气-天数据-->
+    <select id="getGasDayData" resultType="java.lang.String">
+        SELECT
+            power_per_hour
+        FROM
+            day_data_gqf
+        WHERE
+            date = #{date}
+            <if test="meter_ids != null">
+                AND meter_id IN
+                <foreach collection="meter_ids" item="id" index="index" open="(" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+    </select>
+
+
+</mapper>

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sl.idripweb.dao.UserDao">
+    <!-- 根据uname取用户数据 -->
+    <select id="getUserInfo" resultType="java.util.HashMap">
+        SELECT
+            u.id AS uid,
+            u.pwd AS pwd,
+            u.oper_pwd AS oper_pwd,
+            u.uname AS uname,
+            u. name AS name,
+            u. operate_system AS operate_system,
+            rur.id AS rid,
+            rur.role_name AS role_name,
+            rur. level AS level,
+            u.type AS user_type,
+            u.update_time,
+            u.reg_time
+        FROM
+            user u
+        LEFT JOIN rbac_user_role_relation rurr ON u.id = rurr.uid
+        LEFT JOIN rbac_user_role rur ON rurr.rid = rur.id
+        WHERE
+            uname = #{uname}
+            AND u.is_delete = 0
+        LIMIT 1
+    </select>
+
+    <!-- 根据uid取用户项目信息 -->
+    <select id="getUserProjectInfo" resultType="java.util.HashMap">
+        SELECT
+            pi.id,
+            pi.code_name,
+            pi.project_name,
+            pi.date_time,
+            ti.PROJECT_NAME AS pname
+        FROM
+            user_project_relation upr
+        LEFT JOIN tg_info ti ON upr.project_id = ti.project_id
+        LEFT JOIN project_info pi ON upr.project_id = pi.id
+        WHERE
+            upr.uid = #{uid}
+        AND ti.ENABLE = 1
+        LIMIT 1
+    </select>
+
+    <!-- 获取有权限的厂区 -->
+    <select id="getAuthFactorys" resultType="java.util.HashMap">
+        SELECT
+            distinct pf.id,
+            pf.project_id,
+            pf.factory_name,
+            pf.longitude,
+            pf.latitude,
+            pf.build_num,
+            pf.build_acreage
+        FROM
+            user u
+        LEFT  JOIN rbac_user_role_relation rurr ON u.id=rurr.uid
+        LEFT JOIN role_project_factory_relation rpfr ON rurr.`rid`=rpfr.rid
+        LEFT JOIN project_factory pf ON rpfr.factory_id=pf.id
+        WHERE
+            pf.project_id = #{pid}
+            AND
+            rurr.uid=#{uid}
+        ORDER BY
+            pf.id ASC
+    </select>
+
+    <insert id="addUserLog">
+        INSERT INTO `user_log` (`uid`, `oper`, `msg`, `oper_time`, `ip`, `pid` )
+        VALUES
+            ( #{uid}, #{oper}, NULL, #{oper_time}, #{ip}, #{pid} );
+    </insert>
+
+    <update id="updateUrlTips" parameterType="java.util.HashMap">
+        update url_tips
+        SET last_time = #{last_time}
+        WHERE project_id = #{pid}
+    </update>
+
+    <!-- 根据pid取对应登录页信息 -->
+    <select id="getUserLoginPage" resultType="java.util.HashMap">
+        SELECT * FROM loginpage a WHERE a.hostname = #{hostname} LIMIT 1
+    </select>
+
+    <update id="updatePwd" parameterType="java.util.HashMap">
+        update user
+        SET pwd = #{pwd},update_time = #{update_time}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据厂区获取配电室/水泵房/调压站列表 -->
+    <select id="getRoomList" resultType="java.util.HashMap">
+        SELECT
+            `id`,`name`
+        FROM
+            ${room_name}
+        WHERE
+            factory_id = #{factory_id}
+    </select>
+
+</mapper>

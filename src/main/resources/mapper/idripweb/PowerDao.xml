@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sl.idripweb.dao.PowerDao">
+
+    <!-- 获取进线/变压器列表->假数据 -->
+    <select id="getSelectLine" resultType="java.util.Map">
+        SELECT
+            a.factory_id factory_id ,
+            a.transformerroom_id room_id ,
+            a.category_type_id,
+            a.route_type,
+            a.num_per_line,
+            b.category_type device_desc
+        FROM
+            elec_sort_route a
+            LEFT JOIN elec_category_type b ON a.category_type_id = b.id
+        WHERE
+            a.is_delete = 0
+            <if test="project_id != null and project_id != ''">
+                AND a.project_id = #{project_id}
+            </if>
+            <if test="factory_id != null and factory_id != ''">
+                AND a.factory_id = #{factory_id}
+            </if>
+            <if test="transformerroom_id != null and transformerroom_id != ''">
+                AND a.transformerroom_id = #{transformerroom_id}
+            </if>
+            <if test="category_type_id != null and category_type_id != ''">
+                AND a.category_type_id = #{category_type_id}
+            </if>
+    </select>
+
+<!--    &lt;!&ndash; 获取进线/变压器列表 &ndash;&gt;-->
+<!--    <select id="getSelectLine" resultType="java.util.Map">-->
+<!--        SELECT r.factory_id, r.transformerroom_id elec_transformer_id,ect.id AS category_type_id, ect.category_type as device_desc-->
+<!--        from `elec_project_category_relation` r-->
+<!--        LEFT JOIN `elec_category_type` ect-->
+<!--        ON ect.id=r.category_type_id-->
+<!--        LEFT JOIN `rbac_menu` m-->
+<!--        ON m.id=r.menu_id-->
+<!--        WHERE m.name='用电监测'-->
+<!--        AND r.project_id=#{project_id}-->
+<!--        <if test="factory_id != null and factory_id != ''">-->
+<!--            and r.factory_id = #{factory_id}-->
+<!--        </if>-->
+<!--        <if test="room_id != null and room_id != ''">-->
+<!--            and r.transformerroom_id = #{room_id}-->
+<!--        </if>-->
+<!--        GROUP BY ect.id-->
+<!--    </select>-->
+
+
+    <!-- 配电室列表 -->
+    <select id="getTransformerroomByPid" resultType="java.util.HashMap">
+        SELECT project_id,factory_id,id room_id,t.name room_name
+        FROM  `transformerroom` t
+        WHERE t.project_id=#{project_id}
+        <if test="factory_id != null and factory_id != ''">
+            AND t.factory_id = #{factory_id}
+        </if>
+    </select>
+
+
+
+</mapper>

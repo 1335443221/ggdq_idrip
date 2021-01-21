@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sl.idripweb.dao.MessageManageDao">
+
+    <!-- 查看按钮 -->
+    <select id="getMessageInfo" resultType="java.util.Map">
+        SELECT m.id,m.phone,u.name user_name,m.senddate,m.receivedate,m.content,m.sendstatus,m.errcode,ur.id
+        role_id,ur.role_name
+        FROM `alerm_message` m
+        left join `user` u on m.phone=u.phone
+        left join  `rbac_user_role_relation` ru  on ru.uid=u.id
+        left join `rbac_user_role` ur on ur.id=ru.rid
+        left join `user_project_relation` pr on pr.uid=u.id
+        where pr.project_id=#{project_id}
+        <if test="btime != null and btime != ''and etime != null and etime != ''">
+            and m.senddate <![CDATA[>=]]>#{btime} and m.senddate <![CDATA[<=]]>#{etime}
+        </if>
+        order by m.senddate desc, m.receivedate desc
+        LIMIT #{fromNum},#{pagSize}
+    </select>
+    <!-- 查看按钮 -->
+    <select id="getMessageInfoCount" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM `alerm_message` m
+        left join `user` u on m.phone=u.phone
+        left join  `rbac_user_role_relation` ru  on ru.uid=u.id
+        left join `rbac_user_role` ur on ur.id=ru.rid
+        left join `user_project_relation` pr on pr.uid=u.id
+        where pr.project_id=#{project_id}
+        <if test="btime != null and btime != ''and etime != null and etime != ''">
+            and m.senddate between #{btime} and #{etime}
+        </if>
+        order by m.senddate desc, m.receivedate desc
+    </select>
+
+    <!-- 错误信息映射 -->
+    <select id="getMessageErrorcodeInfo" resultType="java.util.HashMap">
+        select id,err_code,err_info,operational_suggestions,err_attribution from alerm_message_errcode
+    </select>
+
+
+    <!-- 报警管理统计 -->
+    <select id="getMessageCount" resultType="java.util.HashMap">
+        SELECT
+        m.id,
+        DATE_FORMAT(m.senddate, '%Y-%m-%d') senddate,
+        COUNT(CASE WHEN m.sendstatus=3 THEN 1 END) AS success,
+        COUNT(CASE WHEN m.sendstatus=2 THEN 1 END) AS fail,
+        COUNT(m.id) AS total,
+        ROUND(COUNT(CASE WHEN m.sendstatus=3 THEN 1 END)/COUNT(m.id)*100,2) AS success_rate
+        FROM `alerm_message` m
+        LEFT JOIN `user` u
+        ON m.phone=u.phone
+        LEFT JOIN `user_project_relation` pr
+        ON pr.uid=u.id
+        WHERE pr.project_id=#{project_id}
+        <if test="bdate != null and bdate != '' ">
+            and m.senddate <![CDATA[>=]]>#{bdate}
+        </if>
+        <if test="edate != null and edate != '' ">
+            and m.senddate <![CDATA[<]]>#{edate}
+        </if>
+        GROUP BY DATE_FORMAT(m.senddate, '%Y-%m-%d')
+        ORDER BY DATE_FORMAT(m.senddate, '%Y-%m-%d') DESC
+        <if test="pagSize != 0 ">
+            limit #{fromNum},#{pagSize}
+        </if>
+    </select>
+    <!-- 报警管理统计totalCount -->
+    <select id="getMessageCountCount" resultType="java.lang.Integer">
+        select count(*)totalCount from (
+        SELECT
+        m.id
+        FROM `alerm_message` m
+        LEFT JOIN `user` u
+        ON m.phone=u.phone
+        LEFT JOIN `user_project_relation` pr
+        ON pr.uid=u.id
+        WHERE pr.project_id=#{project_id}
+        <if test="bdate != null and bdate != '' ">
+            and m.senddate <![CDATA[>=]]>#{bdate}
+        </if>
+        <if test="edate != null and edate != '' ">
+            and m.senddate <![CDATA[<]]>#{edate}
+        </if>
+        GROUP BY DATE_FORMAT(m.senddate, '%Y-%m-%d')
+        )t
+    </select>
+
+    <!-- 报警管理统计totalCount -->
+    <select id="getAccountInfo" resultType="java.util.HashMap">
+        SELECT t.project_id ,amount,unit_price,t1.send ,ROUND(amount-t1.send*unit_price,0) AS account_balance FROM(
+        SELECT SUM(deposit_money) amount,p.unit_price,d.project_id FROM message_deposit d
+        LEFT JOIN message_price p
+        ON p.project_id=d.project_id
+        WHERE d.project_id=#{project_id}
+        )t
+        LEFT JOIN
+        (
+        SELECT COUNT(m.id) send,p.project_id FROM `alerm_message` m
+        LEFT JOIN `user` u
+        ON u.phone=m.phone
+        LEFT JOIN `user_project_relation` p
+        ON p.uid=u.id
+        WHERE p.project_id=#{project_id}
+        )t1
+        ON t.project_id=t1.project_id
+    </select>
+
+    <!-- 保存 -->
+    <insert id="save">
+        INSERT INTO `message_config` (
+        project_id,
+        alerm_level,
+        role_id,
+        creater_id,
+        create_time
+        )
+        VALUES(
+        #{project_id},
+        #{alerm_level},
+        #{role_id},
+        #{user_id},
+        SYSDATE()
+        )
+    </insert>
+
+    <!-- 编辑 -->
+    <update id="update">
+        UPDATE `message_config` SET
+        alerm_level=#{alerm_level},
+        role_id=#{role_id},
+        creater_id=#{user_id},
+        create_time=SYSDATE()
+        WHERE id=#{id}
+    </update>
+
+    <!-- 删除 -->
+    <delete id="delete">
+        DELETE FROM `message_config` WHERE id=#{id}
+    </delete>
+
+
+    <!-- 短信配置查询 -->
+    <select id="query" resultType="java.util.HashMap">
+        SELECT DISTINCT
+        c.id,
+        c.alerm_level,
+        c.role_id,
+        r.role_name,
+        u.name user_name,
+        DATE_FORMAT(c.create_time, '%Y-%m-%d %k:%i:%s') as
+        create_time FROM `message_config` c
+        left join `user` u
+        on
+        u.id=c.creater_id
+        left join `rbac_user_role` r
+        on r.id=c.role_id
+        WHERE
+        c.project_id=#{project_id}
+        <if test="alerm_level != null and alerm_level != '' ">
+            AND alerm_level=#{alerm_level}
+        </if>
+        <if test="role_id != null and role_id != '' ">
+            AND role_id=#{role_id}
+        </if>
+        order by create_time desc
+        <if test="pagSize != 0 ">
+            limit #{fromNum},#{pagSize}
+        </if>
+
+    </select>
+    <!-- 短信配置查询 -->
+    <select id="queryCount" resultType="java.lang.Integer">
+        SELECT COUNT(*)totalCount
+        FROM `message_config` c
+        WHERE c.project_id=#{project_id}
+        <if test="alerm_level != null and alerm_level != '' ">
+            AND alerm_level=#{alerm_level}
+        </if>
+        <if test="role_id != null and role_id != '' ">
+            AND role_id=#{role_id}
+        </if>
+        <if test="is_edit != null and is_edit != '' ">
+            AND (c.id &lt; #{id} OR c.id > #{id})
+        </if>
+    </select>
+
+    <!-- 获取角色 -->
+    <select id="getRoles" resultType="java.util.HashMap">
+        SELECT DISTINCT
+        r.id,r.role_name,r.level,r.description FROM `rbac_user_role` r
+        LEFT JOIN `role_project_factory_relation` fr
+        ON fr.rid=r.id
+        LEFT JOIN `project_factory` p
+        ON fr.factory_id=p.id
+        WHERE p.project_id=#{project_id}
+    </select>
+    <!-- 查询角色下人员信息 -->
+    <select id="getUserByRoleId" resultType="java.util.HashMap">
+        SELECT r.rid AS role_id,ur.role_name,u.id AS uid,u.name AS user_name,u.phone FROM `rbac_user_role_relation` r
+        LEFT JOIN `user` u
+        ON u.id=r.uid
+        LEFT JOIN `rbac_user_role` ur
+        ON ur.id=r.rid
+        WHERE 1=1
+            <if test="role_id != null">
+                AND r.rid IN
+                <foreach collection="role_id" item="id" index="index" open="(" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+    </select>
+</mapper>

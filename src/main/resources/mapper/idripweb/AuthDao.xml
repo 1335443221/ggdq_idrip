@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sl.idripweb.dao.AuthDao">
+    <!-- 获取菜单权限 -->
+    <select id="getMenuList" resultType="java.util.HashMap">
+        SELECT rm.id,rpm.pid,rpm.name,rm.uri,rm.url,rpm.order,rm.path,rm.redirect,rm.component,rpm.display,rm.icon,rm.description,ra.id AS aid
+            FROM rbac_project_menu rpm
+            LEFT JOIN rbac_menu rm ON rm.id = rpm.rm_id
+            LEFT JOIN rbac_auth ra ON rm.id = ra.tid AND ra.type ='menu'
+            WHERE rm.id IN (
+                SELECT ra.tid FROM rbac_auth ra WHERE ra.id IN (
+                    SELECT rar.aid FROM rbac_role_auth_relation rar,
+                        (SELECT urr.rid FROM rbac_user_role_relation urr WHERE urr.uid = #{uid}) r
+                    WHERE rar.rid = r.rid
+            ) AND ra.type = 'menu') AND rpm.project_id = #{pid} ORDER BY `pid` ASC,`order` ASC
+    </select>
+
+    <!-- 获取菜单权限2 -->
+    <select id="getMenuList2" resultType="java.util.HashMap">
+        SELECT rm.*,ra.id AS aid FROM rbac_menu rm
+                LEFT JOIN rbac_auth ra ON rm.id = ra.tid AND ra.type ='menu'
+            WHERE rm.id IN (
+                SELECT ra.tid FROM rbac_auth ra WHERE ra.id IN (
+                    SELECT rar.aid FROM rbac_role_auth_relation rar,
+                        (SELECT urr.rid FROM rbac_user_role_relation urr WHERE urr.uid = #{uid}) r
+                    WHERE rar.rid = r.rid
+            ) AND ra.type = 'menu') ORDER BY `pid` ASC,`order` ASC
+    </select>
+
+    <!-- 获取视图权限 -->
+    <select id="getViewList" resultType="java.lang.String">
+        SELECT rv.uri FROM rbac_view rv
+                LEFT JOIN rbac_auth ra ON rv.id = ra.tid AND ra.type ='view'
+                WHERE rv.id IN (
+                SELECT ra.tid FROM rbac_auth ra WHERE ra.id IN (
+                SELECT rar.aid FROM rbac_role_auth_relation rar,
+                (SELECT urr.rid FROM rbac_user_role_relation urr WHERE urr.uid = #{uid}) r
+                WHERE rar.rid = r.rid
+                ) AND ra.type = 'view')
+    </select>
+
+    <!-- 获取数据权限 -->
+    <select id="getDataList" resultType="java.util.HashMap">
+        SELECT rd.*,ra.id AS aid FROM rbac_data rd
+                LEFT JOIN rbac_auth ra ON rd.id = ra.tid AND ra.type ='data'
+                WHERE rd.id IN (
+                SELECT ra.tid FROM rbac_auth ra WHERE ra.id IN (
+                SELECT rar.aid FROM rbac_role_auth_relation rar,
+                (SELECT urr.rid FROM rbac_user_role_relation urr WHERE urr.uid = #{uid}) r
+                WHERE rar.rid = r.rid
+                ) AND ra.type = 'data')
+    </select>
+
+    <!-- 获取全部需要验证的view -->
+    <select id="getNeedAuthView" resultType="java.lang.String">
+        SELECT
+            b.uri
+        FROM
+            rbac_auth a
+        JOIN rbac_view b ON a.tid=b.id
+        WHERE a.type = 'view'
+    </select>
+
+</mapper>

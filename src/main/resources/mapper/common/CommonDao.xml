@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sl.common.dao.CommonDao">
+
+
+	<!-- 变压器列表 -->
+	<select id="getTransformerList" resultType="java.util.HashMap">
+		SELECT t.id,t.transformer_name,t.low_meter_id device_id,m.`desc`,m.device_name
+		FROM `elec_transformer` t
+		LEFT JOIN `elec_meter` m ON t.low_meter_id=m.id
+		WHERE t.project_id=#{project_id}
+		<if test="room_id != null and room_id != '' and room_id != 0">
+			and t.transformerroom_id = #{room_id}
+		</if>
+	</select>
+	<!-- 获取 水电气 分类列表 -->
+	<select id="getCategoryTree" resultType="com.sl.common.entity.CategoryTree">
+        SELECT a.category_id,a.parent_category_id parentCategoryId,a.category_name text
+        FROM ${categoryRelationTable} a
+        WHERE a.project_id=#{project_id}
+        AND a.category_type_id=#{category_type}
+		<if test="room_id != null and room_id != '' and room_id != 0">
+			AND a.${roomIdName}=#{room_id}
+		</if>
+		<if test="factory_id != null and factory_id != '' and factory_id != 0">
+			AND a.factory_id=#{factory_id}
+		</if>
+		ORDER BY a.category_id
+    </select>
+
+	<!-- 获取rbac_menu数据 -->
+	<select id="getMenuList" resultType="java.util.HashMap">
+		SELECT
+			a.id,a.pid,a.name,a.uri,a.url,a.redirect,a.order,a.path,a.component,a.icon,a.description
+		FROM
+			rbac_menu a
+		WHERE
+			pid = #{pid}
+			AND a.display = 1
+		ORDER BY
+			a.order ASC
+	</select>
+
+	<!-- 验证操作密码-->
+	<select id="verifyPWD" resultType="java.util.HashMap">
+		SELECT id,uname,pwd,oper_pwd,phone FROM `user` u
+		WHERE
+			id = #{user_id}
+			AND oper_pwd =#{oper_pwd}
+	</select>
+
+	<!-- 获取device_type_relation_id-->
+	<select id="getDeviceIdByName" resultType="java.lang.Integer">
+		SELECT b.id FROM ${tableName} a
+		INNER JOIN `device_type_relation` b ON a.id=b.device_id AND b.device_type_id=${device_type_id}
+		WHERE
+			a.device_name = #{meterName} AND a.project_id=#{project_id} AND a.factory_id=#{factory_id}
+	</select>
+
+
+	<!--===以上为对外 公共接口+====-->
+
+	<!-- 园区列表 -->
+	<select id="getFactoryByProjectid" resultType="java.util.HashMap">
+		SELECT f.id AS factory_id,f.factory_name FROM `project_factory` f
+		where f.project_id=#{project_id}
+		<if test="factory_id != null and factory_id != ''">
+			and f.id = #{factory_id}
+		</if>
+	</select>
+
+
+
+
+    <!-- 获取通讯机信息 -->
+    <select id="getTGInfoByName" resultType="java.util.HashMap">
+        select project_id,factory_id,tg_name,tg_rtdb,sn from `tg_info`
+        where project_id=#{projectId}
+        <if test="tgName != null and tgName  != ''">
+            and tg_rtdb=#{tgName}
+        </if>
+        <if test="factoryId != null and factoryId  != ''  and factoryId  != 0">
+            and factory_id=#{factoryId}
+        </if>
+    </select>
+
+    <!-- 保存操作日志-->
+    <insert id="setOperationLogs" parameterType="com.sl.common.entity.OperationLogs" >
+		 INSERT INTO `operation_logs`
+		(uid,project_id,ip,client,request_uri,device_type_relation_id,behavior_type,detailed_type,behavior_result,log_time)
+		VALUES
+		(	#{uid},
+			#{project_id},
+			#{ip},
+			#{client},
+			#{request_uri},
+			#{device_type_relation_id},
+			#{behavior_type},
+			#{detailed_type},
+			#{behavior_result},
+			NOW()
+		)
+	</insert>
+
+
+
+
+
+</mapper>

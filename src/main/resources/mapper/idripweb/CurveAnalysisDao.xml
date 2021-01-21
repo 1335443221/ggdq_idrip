@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sl.idripweb.dao.CurveAnalysisDao">
+
+    <!-- 获取设备列表(曲线分析) -->
+    <select id="getRoomDevice" resultType="java.util.HashMap">
+        SELECT
+            b.id room_id,
+            b.name room_name,
+            a.id device_id,
+            a.device_name,
+            c.id panel_id,
+            a.tg_id,
+            a.desc device_desc
+        FROM
+            ${meter_type}_meter a
+            LEFT JOIN ${room_name} AS b ON b.id = a.${room_name}_id
+            LEFT JOIN `panel` c ON c.id = a.panel_id
+            WHERE c.type IN (0,3)
+            <if test="room_id != null and room_id != '' and room_id != '0' and room_id != 0">
+                and a.${room_name}_id = #{room_id}
+            </if>
+            AND a.factory_id = #{factory_id}
+            ORDER BY c.type DESC, a.id DESC
+    </select>
+
+    <!-- 获取变压器低压进线表(曲线分析) -->
+    <select id="getLowIncomingLine" resultType="java.util.HashMap">
+        SELECT
+            a.id,a.transformer_name,c.id device_id,c.desc,c.device_name
+        FROM
+            elec_transformer a
+        LEFT JOIN
+            elec_meter c ON a.low_meter_id=c.id
+        WHERE
+            c.transformerroom_id=#{transformerroom_id}
+    </select>
+
+    <!-- 按表查找对应数据 -->
+    <select id="getHistoryData" resultType="java.util.HashMap">
+        SELECT
+            a.id,a.detail,b.device_name,c.tag_name
+        FROM
+            ${key} `a`
+            LEFT JOIN ${tag_type}_meter b ON a.meter_id=b.id
+            LEFT JOIN ${tag_type}_tag c ON a.tag_id=c.id
+            LEFT JOIN project_info d ON b.project_id=d.id
+        WHERE
+            d.code_name=#{pname}
+            <if test="devices != null">
+                AND b.device_name IN
+                <foreach collection="devices" item="id" index="index" open="(" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+            <if test="value != null">
+                AND c.tag_name IN
+                <foreach collection="value" item="id" index="index" open="(" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+            <if test="start_time != null and start_time!= ''">
+                AND a.date &gt;= #{start_time}
+            </if>
+            <if test="end_time != null and end_time!= ''">
+                AND a.date &lt;= #{end_time}
+            </if>
+        ORDER BY a.date ${order}
+    </select>
+
+    <!-- 获取标线告警配置数据 -->
+    <select id="getThreshold" resultType="java.util.HashMap">
+        SELECT
+            b.id device_id,a.tag,a.h_level1,a.h_level2,a.l_level1,a.l_level2
+        FROM
+            alerm_configer a
+        LEFT JOIN device_info_relation b ON b.device_type_relation_id=a.device_type_relation_id
+        WHERE b.device_type = 'elec_meter'
+            AND b.id=#{deviceId}
+    </select>
+
+</mapper>

@@ -1,0 +1,36 @@
+/target/
+!.mvn/wrapper/maven-wrapper.jar
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+###*.properties
+src/main/resources/logback.xml
+src/main/resources/mybatis.xml
+src/main/resources/README
+target/
+../.idea/
+../LOG_HOME_IS_UNDEFINED/
+LOG_HOME_IS_UNDEFINED/
+log/
+worklog
+git
+worklog
+### NetBeans ###
+/nbproject/private/
+/build/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
